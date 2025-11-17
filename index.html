@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tensegrity 3D Builder</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #8b5cf6;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border: rgba(148, 163, 184, 0.2);
+            --glass: rgba(26, 26, 46, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+        }
+
+        #app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.6); }
+        }
+
+        #control-panel {
+            width: 340px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            z-index: 10;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.6s ease-out;
+        }
+
+        .panel-section {
+            background: rgba(22, 33, 62, 0.6);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .panel-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            border-color: var(--primary-light);
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--primary-light);
+            text-align: center;
+            background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 8px;
+            position: relative;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 30%;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: 1px solid var(--primary-light);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            flex: 1;
+            min-width: 100px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+            border-color: var(--accent);
+        }
+
+        button.active {
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            animation: glow 2s infinite;
+            transform: translateY(-2px);
+        }
+
+        .preset-button {
+            background: linear-gradient(135deg, var(--secondary), #7c3aed);
+        }
+
+        .preset-button:hover {
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+        }
+
+        .simulation-button {
+            background: linear-gradient(135deg, var(--success), #059669);
+        }
+
+        .simulation-button:hover {
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .utility-button {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+        }
+
+        .utility-button:hover {
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
+        }
+
+        .export-button {
+            background: linear-gradient(135deg, var(--accent), #0891b2);
+        }
+
+        .export-button:hover {
+            box-shadow: 0 10px 25px rgba(6, 182, 212, 0.4);
+        }
+
+        .danger-button {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+        }
+
+        .danger-button:hover {
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        select, input {
+            background: rgba(22, 33, 62, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: 12px;
+            width: 100%;
+            margin-bottom: 12px;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            background: rgba(22, 33, 62, 0.6);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: scale(1.05);
+            border-color: var(--primary);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-light);
+            margin-top: 4px;
+            animation: pulse 2s infinite;
+        }
+
+        .cost-display {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            color: var(--success);
+            margin: 16px 0;
+            padding: 16px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.2));
+            border-radius: 12px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            animation: pulse 3s infinite;
+        }
+
+        #render-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #status-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            padding: 16px 24px;
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .instructions {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+            line-height: 1.5;
+            padding: 12px;
+            background: rgba(22, 33, 62, 0.3);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+
+        #control-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #control-panel::-webkit-scrollbar-track {
+            background: rgba(22, 33, 62, 0.3);
+            border-radius: 3px;
+        }
+
+        #control-panel::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        #control-panel::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-light);
+        }
+
+        .loading {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), transparent);
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <div id="control-panel">
+            <div class="panel-section">
+                <h1>Tensegrity 3D Builder</h1>
+                <div class="instructions">
+                    Create and explore 3D tensegrity structures. Add nodes, connect them with bars or cables, and simulate physics.
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>Interaction Mode</h2>
+                <div class="button-group">
+                    <button id="mode-add-node" class="active">Add Node</button>
+                    <button id="mode-connect">Connect</button>
+                    <button id="mode-select">Select/Move</button>
+                </div>
+                <div class="instructions">
+                    <strong>Add Node:</strong> Click on ground to add nodes<br>
+                    <strong>Connect:</strong> Click two nodes to connect them<br>
+                    <strong>Select/Move:</strong> Click to select, Shift+Drag to move
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>Member Type & Material</h2>
+                <select id="member-type">
+                    <option value="bar">Compression Bar</option>
+                    <option value="cable">Tension Cable</option>
+                </select>
+                <select id="material-type">
+                    <option value="Steel">Steel (₹150/m)</option>
+                    <option value="Wood">Wood (₹60/m)</option>
+                    <option value="CarbonFiber">Carbon Fiber (₹480/m)</option>
+                    <option value="Rope">Rope (₹35/m)</option>
+                </select>
+                <div class="instructions">
+                    Bars resist compression, cables resist tension only.
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>Structure Stats</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div>Nodes</div>
+                        <div class="stat-value" id="node-count">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div>Members</div>
+                        <div class="stat-value" id="member-count">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div>Bars</div>
+                        <div class="stat-value" id="bar-count">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div>Cables</div>
+                        <div class="stat-value" id="cable-count">0</div>
+                    </div>
+                </div>
+                <div class="cost-display" id="total-cost">₹0</div>
+            </div>
+
+            <div class="panel-section">
+                <h2>Preset Structures</h2>
+                <div class="button-group">
+                    <button id="preset-prism" class="preset-button">Tensegrity Prism</button>
+                    <button id="preset-tower" class="preset-button">Tensegrity Tower</button>
+                    <button id="preset-dome" class="preset-button">Tensegrity Dome</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>Simulation</h2>
+                <div class="button-group">
+                    <button id="simulate-relax" class="simulation-button">Relax Structure</button>
+                    <button id="pin-all" class="utility-button">Pin All Nodes</button>
+                    <button id="unpin-all" class="utility-button">Unpin All Nodes</button>
+                </div>
+                <div class="instructions">
+                    Relax: Simulates physics for 500 steps to find equilibrium.
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>Data Management</h2>
+                <div class="button-group">
+                    <button id="export-data" class="export-button">Export JSON</button>
+                    <button id="import-data" class="export-button">Import JSON</button>
+                    <button id="clear-all" class="danger-button">Clear All</button>
+                </div>
+                <input type="file" id="import-file" accept=".json" style="display: none;">
+            </div>
+        </div>
+
+        <div id="render-container">
+            <canvas id="canvas"></canvas>
+            <div id="status-bar">
+                <span id="status-text">Ready - Click on ground to add nodes</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        const state = {
+            mode: 'addNode',
+            nodes: [],
+            members: [],
+            nextNodeId: 1,
+            nextMemberId: 1,
+            selectedNode: null,
+            firstNodeForConnection: null,
+            simulationRunning: false,
+            materials: {
+                Steel: { cost: 150, color: 0x888888 },
+                Wood: { cost: 60, color: 0x8B4513 },
+                CarbonFiber: { cost: 480, color: 0x222222 },
+                Rope: { cost: 35, color: 0xDEB887 }
+            }
+        };
+
+        let scene, camera, renderer, controls;
+        let ground, gridHelper;
+        let raycaster, mouse;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a15);
+
+            const canvasWidth = window.innerWidth - 340;
+            const canvasHeight = window.innerHeight;
+            
+            camera = new THREE.PerspectiveCamera(75, canvasWidth / canvasHeight, 0.1, 1000);
+            camera.position.set(10, 10, 10);
+            camera.lookAt(0, 0, 0);
+
+            const canvas = document.getElementById('canvas');
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(canvasWidth, canvasHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 20, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            const groundGeometry = new THREE.PlaneGeometry(50, 50);
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x1a1a2e, 
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            gridHelper = new THREE.GridHelper(50, 50, 0x303050, 0x202040);
+            scene.add(gridHelper);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            window.addEventListener('resize', onWindowResize);
+            canvas.addEventListener('click', onCanvasClick);
+            canvas.addEventListener('mousemove', onMouseMove);
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            document.getElementById('mode-add-node').addEventListener('click', () => setMode('addNode'));
+            document.getElementById('mode-connect').addEventListener('click', () => setMode('connect'));
+            document.getElementById('mode-select').addEventListener('click', () => setMode('select'));
+            
+            document.getElementById('preset-prism').addEventListener('click', createTensegrityPrism);
+            document.getElementById('preset-tower').addEventListener('click', createTensegrityTower);
+            document.getElementById('preset-dome').addEventListener('click', createTensegrityDome);
+            
+            document.getElementById('simulate-relax').addEventListener('click', relaxStructure);
+            document.getElementById('pin-all').addEventListener('click', pinAllNodes);
+            document.getElementById('unpin-all').addEventListener('click', unpinAllNodes);
+            
+            document.getElementById('export-data').addEventListener('click', exportStructure);
+            document.getElementById('import-data').addEventListener('click', () => document.getElementById('import-file').click());
+            document.getElementById('import-file').addEventListener('change', importStructure);
+            document.getElementById('clear-all').addEventListener('click', clearAll);
+
+            animate();
+            updateUI();
+        }
+
+        function setMode(newMode) {
+            state.mode = newMode;
+            
+            document.getElementById('mode-add-node').classList.toggle('active', newMode === 'addNode');
+            document.getElementById('mode-connect').classList.toggle('active', newMode === 'connect');
+            document.getElementById('mode-select').classList.toggle('active', newMode === 'select');
+            
+            state.firstNodeForConnection = null;
+            updateStatus();
+        }
+
+        function onCanvasClick(event) {
+            event.preventDefault();
+            
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            
+            if (state.mode === 'addNode') {
+                const intersects = raycaster.intersectObject(ground);
+                if (intersects.length > 0) {
+                    const point = intersects[0].point;
+                    addNode(point.x, point.y + 0.5, point.z);
+                }
+            } else if (state.mode === 'connect') {
+                const nodeMeshes = state.nodes.map(node => node.mesh);
+                const intersects = raycaster.intersectObjects(nodeMeshes);
+                
+                if (intersects.length > 0) {
+                    const clickedNode = state.nodes.find(node => node.mesh === intersects[0].object);
+                    
+                    if (state.firstNodeForConnection === null) {
+                        state.firstNodeForConnection = clickedNode;
+                        updateStatus(`Selected node ${clickedNode.id}. Now click another node to connect.`);
+                    } else {
+                        if (state.firstNodeForConnection !== clickedNode) {
+                            const memberType = document.getElementById('member-type').value;
+                            const material = document.getElementById('material-type').value;
+                            addMember(state.firstNodeForConnection, clickedNode, memberType, material);
+                        }
+                        state.firstNodeForConnection = null;
+                        updateStatus();
+                    }
+                }
+            } else if (state.mode === 'select') {
+                const nodeMeshes = state.nodes.map(node => node.mesh);
+                const intersects = raycaster.intersectObjects(nodeMeshes);
+                
+                if (intersects.length > 0) {
+                    const clickedNode = state.nodes.find(node => node.mesh === intersects[0].object);
+                    
+                    if (event.shiftKey) {
+                        clickedNode.pinned = !clickedNode.pinned;
+                        updateNodeVisual(clickedNode);
+                    } else {
+                        selectNode(clickedNode);
+                    }
+                } else {
+                    selectNode(null);
+                }
+            }
+        }
+
+        function onMouseMove(event) {
+            if (state.mode !== 'select' || !state.selectedNode || !event.shiftKey) return;
+            
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(ground);
+            
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                moveNode(state.selectedNode, point.x, point.y + 0.5, point.z);
+            }
+        }
+
+        function addNode(x, y, z) {
+            const node = {
+                id: state.nextNodeId++,
+                position: { x, y, z },
+                pinned: false
+            };
+            
+            const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+            const material = new THREE.MeshStandardMaterial({ color: 0x6366f1 });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            scene.add(mesh);
+            
+            node.mesh = mesh;
+            state.nodes.push(node);
+            
+            updateUI();
+            updateStatus(`Added node ${node.id} at (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)})`);
+            
+            return node;
+        }
+
+        function addMember(nodeA, nodeB, type, material) {
+            const dx = nodeB.position.x - nodeA.position.x;
+            const dy = nodeB.position.y - nodeA.position.y;
+            const dz = nodeB.position.z - nodeA.position.z;
+            const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            
+            const member = {
+                id: state.nextMemberId++,
+                nodeA: nodeA,
+                nodeB: nodeB,
+                type: type,
+                material: material,
+                restLength: length
+            };
+            
+            const geometry = new THREE.CylinderGeometry(0.05, 0.05, length, 8);
+            geometry.translate(0, length / 2, 0);
+            geometry.rotateZ(Math.PI / 2);
+            
+            const materialColor = state.materials[material].color;
+            const memberMaterial = new THREE.MeshStandardMaterial({ 
+                color: materialColor,
+                roughness: type === 'cable' ? 0.9 : 0.4,
+                metalness: type === 'cable' ? 0.1 : 0.7
+            });
+            
+            const mesh = new THREE.Mesh(geometry, memberMaterial);
+            
+            mesh.position.set(
+                (nodeA.position.x + nodeB.position.x) / 2,
+                (nodeA.position.y + nodeB.position.y) / 2,
+                (nodeA.position.z + nodeB.position.z) / 2
+            );
+            
+            mesh.lookAt(nodeB.position.x, nodeB.position.y, nodeB.position.z);
+            mesh.castShadow = true;
+            scene.add(mesh);
+            
+            member.mesh = mesh;
+            state.members.push(member);
+            
+            updateUI();
+            updateStatus(`Added ${type} (${material}) between nodes ${nodeA.id} and ${nodeB.id}`);
+            
+            return member;
+        }
+
+        function selectNode(node) {
+            if (state.selectedNode) {
+                state.selectedNode.mesh.material.color.set(0x6366f1);
+            }
+            
+            state.selectedNode = node;
+            
+            if (node) {
+                node.mesh.material.color.set(0xf59e0b);
+                updateStatus(`Selected node ${node.id}. Shift+Drag to move. Click to ${node.pinned ? 'unpin' : 'pin'}.`);
+            } else {
+                updateStatus();
+            }
+        }
+
+        function moveNode(node, x, y, z) {
+            if (node.pinned) return;
+            
+            node.position.x = x;
+            node.position.y = y;
+            node.position.z = z;
+            node.mesh.position.set(x, y, z);
+            
+            updateConnectedMembers(node);
+            updateUI();
+        }
+
+        function updateConnectedMembers(node) {
+            state.members.forEach(member => {
+                if (member.nodeA === node || member.nodeB === node) {
+                    const nodeA = member.nodeA;
+                    const nodeB = member.nodeB;
+                    
+                    member.mesh.position.set(
+                        (nodeA.position.x + nodeB.position.x) / 2,
+                        (nodeA.position.y + nodeB.position.y) / 2,
+                        (nodeA.position.z + nodeB.position.z) / 2
+                    );
+                    
+                    member.mesh.lookAt(nodeB.position.x, nodeB.position.y, nodeB.position.z);
+                    
+                    const dx = nodeB.position.x - nodeA.position.x;
+                    const dy = nodeB.position.y - nodeA.position.y;
+                    const dz = nodeB.position.z - nodeA.position.z;
+                    const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    
+                    member.mesh.scale.y = length / member.restLength;
+                }
+            });
+        }
+
+        function updateNodeVisual(node) {
+            if (node.pinned) {
+                node.mesh.material.color.set(0xef4444);
+            } else if (state.selectedNode === node) {
+                node.mesh.material.color.set(0xf59e0b);
+            } else {
+                node.mesh.material.color.set(0x6366f1);
+            }
+        }
+
+        function relaxStructure() {
+            if (state.simulationRunning) return;
+            
+            state.simulationRunning = true;
+            const button = document.getElementById('simulate-relax');
+            button.classList.add('loading');
+            updateStatus("Running relaxation simulation...");
+            
+            const steps = 500;
+            let step = 0;
+            
+            const simulationStep = () => {
+                if (step >= steps) {
+                    state.simulationRunning = false;
+                    button.classList.remove('loading');
+                    updateStatus("Relaxation complete");
+                    return;
+                }
+                
+                state.nodes.forEach(node => {
+                    if (node.pinned) return;
+                    
+                    let fx = 0, fy = 0, fz = 0;
+                    
+                    state.members.forEach(member => {
+                        if (member.nodeA === node || member.nodeB === node) {
+                            const otherNode = member.nodeA === node ? member.nodeB : member.nodeA;
+                            const dx = otherNode.position.x - node.position.x;
+                            const dy = otherNode.position.y - node.position.y;
+                            const dz = otherNode.position.z - node.position.z;
+                            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                            
+                            let force = 0;
+                            const k = 0.01;
+                            
+                            if (member.type === 'bar') {
+                                force = k * (distance - member.restLength);
+                            } else {
+                                if (distance > member.restLength) {
+                                    force = k * (distance - member.restLength);
+                                }
+                            }
+                            
+                            if (distance > 0) {
+                                fx += force * (dx / distance);
+                                fy += force * (dy / distance);
+                                fz += force * (dz / distance);
+                            }
+                        }
+                    });
+                    
+                    const damping = 0.95;
+                    fx *= damping;
+                    fy *= damping;
+                    fz *= damping;
+                    
+                    node.position.x += fx;
+                    node.position.y += fy;
+                    node.position.z += fz;
+                    
+                    if (node.position.y < 0.5) node.position.y = 0.5;
+                    
+                    node.mesh.position.set(node.position.x, node.position.y, node.position.z);
+                });
+                
+                state.members.forEach(member => {
+                    const nodeA = member.nodeA;
+                    const nodeB = member.nodeB;
+                    
+                    member.mesh.position.set(
+                        (nodeA.position.x + nodeB.position.x) / 2,
+                        (nodeA.position.y + nodeB.position.y) / 2,
+                        (nodeA.position.z + nodeB.position.z) / 2
+                    );
+                    
+                    member.mesh.lookAt(nodeB.position.x, nodeB.position.y, nodeB.position.z);
+                    
+                    const dx = nodeB.position.x - nodeA.position.x;
+                    const dy = nodeB.position.y - nodeA.position.y;
+                    const dz = nodeB.position.z - nodeA.position.z;
+                    const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    
+                    member.mesh.scale.y = length / member.restLength;
+                });
+                
+                step++;
+                requestAnimationFrame(simulationStep);
+            };
+            
+            simulationStep();
+        }
+
+        function pinAllNodes() {
+            state.nodes.forEach(node => {
+                node.pinned = true;
+                updateNodeVisual(node);
+            });
+            updateStatus("All nodes pinned");
+        }
+
+        function unpinAllNodes() {
+            state.nodes.forEach(node => {
+                node.pinned = false;
+                updateNodeVisual(node);
+            });
+            updateStatus("All nodes unpinned");
+        }
+
+        function createTensegrityPrism() {
+            clearAll();
+            
+            const nodes = [
+                addNode(-2, 1, 0),
+                addNode(2, 1, 0),
+                addNode(0, 1, 2),
+                addNode(-1.5, 4, 0),
+                addNode(1.5, 4, 0),
+                addNode(0, 4, 1.5)
+            ];
+            
+            nodes[0].pinned = true;
+            nodes[1].pinned = true;
+            nodes[2].pinned = true;
+            updateNodeVisual(nodes[0]);
+            updateNodeVisual(nodes[1]);
+            updateNodeVisual(nodes[2]);
+            
+            addMember(nodes[0], nodes[3], 'bar', 'Steel');
+            addMember(nodes[1], nodes[4], 'bar', 'Steel');
+            addMember(nodes[2], nodes[5], 'bar', 'Steel');
+            
+            addMember(nodes[3], nodes[4], 'cable', 'Rope');
+            addMember(nodes[4], nodes[5], 'cable', 'Rope');
+            addMember(nodes[5], nodes[3], 'cable', 'Rope');
+            
+            addMember(nodes[0], nodes[4], 'cable', 'Rope');
+            addMember(nodes[0], nodes[5], 'cable', 'Rope');
+            addMember(nodes[1], nodes[3], 'cable', 'Rope');
+            addMember(nodes[1], nodes[5], 'cable', 'Rope');
+            addMember(nodes[2], nodes[3], 'cable', 'Rope');
+            addMember(nodes[2], nodes[4], 'cable', 'Rope');
+            
+            updateStatus("Created Tensegrity Prism preset");
+        }
+
+        function createTensegrityTower() {
+            clearAll();
+            
+            const baseNodes = [
+                addNode(-3, 0.5, -3),
+                addNode(3, 0.5, -3),
+                addNode(3, 0.5, 3),
+                addNode(-3, 0.5, 3)
+            ];
+            
+            const midNodes = [
+                addNode(-2, 3, -2),
+                addNode(2, 3, -2),
+                addNode(2, 3, 2),
+                addNode(-2, 3, 2)
+            ];
+            
+            const topNodes = [
+                addNode(-1.5, 6, -1.5),
+                addNode(1.5, 6, -1.5),
+                addNode(1.5, 6, 1.5),
+                addNode(-1.5, 6, 1.5)
+            ];
+            
+            baseNodes.forEach(node => {
+                node.pinned = true;
+                updateNodeVisual(node);
+            });
+            
+            for (let i = 0; i < 4; i++) {
+                addMember(baseNodes[i], midNodes[i], 'bar', 'Steel');
+                addMember(midNodes[i], topNodes[i], 'bar', 'Steel');
+            }
+            
+            for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
+                addMember(baseNodes[i], midNodes[next], 'cable', 'Rope');
+                addMember(midNodes[i], topNodes[next], 'cable', 'Rope');
+            }
+            
+            for (let i = 0; i < 4; i++) {
+                const next = (i + 1) % 4;
+                addMember(midNodes[i], midNodes[next], 'cable', 'Rope');
+                addMember(topNodes[i], topNodes[next], 'cable', 'Rope');
+            }
+            
+            updateStatus("Created Tensegrity Tower preset");
+        }
+
+        function createTensegrityDome() {
+            clearAll();
+            
+            const center = addNode(0, 5, 0);
+            center.pinned = true;
+            updateNodeVisual(center);
+            
+            const ringNodes = [];
+            const ringCount = 6;
+            const radius = 4;
+            
+            for (let i = 0; i < ringCount; i++) {
+                const angle = (i / ringCount) * Math.PI * 2;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                const node = addNode(x, 0.5, z);
+                node.pinned = true;
+                updateNodeVisual(node);
+                ringNodes.push(node);
+            }
+            
+            ringNodes.forEach(node => {
+                addMember(center, node, 'bar', 'CarbonFiber');
+            });
+            
+            for (let i = 0; i < ringCount; i++) {
+                const next = (i + 1) % ringCount;
+                addMember(ringNodes[i], ringNodes[next], 'cable', 'Rope');
+            }
+            
+            updateStatus("Created Tensegrity Dome preset");
+        }
+
+        function exportStructure() {
+            const exportData = {
+                nodes: state.nodes.map(node => ({
+                    id: node.id,
+                    position: node.position,
+                    pinned: node.pinned
+                })),
+                members: state.members.map(member => ({
+                    id: member.id,
+                    nodeAId: member.nodeA.id,
+                    nodeBId: member.nodeB.id,
+                    type: member.type,
+                    material: member.material,
+                    restLength: member.restLength
+                }))
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'tensegrity-structure.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            updateStatus("Structure exported as JSON");
+        }
+
+        function importStructure(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importData = JSON.parse(e.target.result);
+                    
+                    clearAll();
+                    
+                    const nodeMap = {};
+                    importData.nodes.forEach(nodeData => {
+                        const node = addNode(
+                            nodeData.position.x,
+                            nodeData.position.y,
+                            nodeData.position.z
+                        );
+                        node.pinned = nodeData.pinned;
+                        updateNodeVisual(node);
+                        nodeMap[nodeData.id] = node;
+                    });
+                    
+                    importData.members.forEach(memberData => {
+                        const nodeA = nodeMap[memberData.nodeAId];
+                        const nodeB = nodeMap[memberData.nodeBId];
+                        
+                        if (nodeA && nodeB) {
+                            addMember(
+                                nodeA,
+                                nodeB,
+                                memberData.type,
+                                memberData.material
+                            );
+                        }
+                    });
+                    
+                    updateStatus("Structure imported from JSON");
+                } catch (error) {
+                    updateStatus("Error importing structure: " + error.message);
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function clearAll() {
+            state.nodes.forEach(node => {
+                scene.remove(node.mesh);
+            });
+            
+            state.members.forEach(member => {
+                scene.remove(member.mesh);
+            });
+            
+            state.nodes = [];
+            state.members = [];
+            state.selectedNode = null;
+            state.firstNodeForConnection = null;
+            
+            state.nextNodeId = 1;
+            state.nextMemberId = 1;
+            
+            updateUI();
+            updateStatus("All structures cleared");
+        }
+
+        function updateUI() {
+            document.getElementById('node-count').textContent = state.nodes.length;
+            document.getElementById('member-count').textContent = state.members.length;
+            
+            const barCount = state.members.filter(m => m.type === 'bar').length;
+            const cableCount = state.members.filter(m => m.type === 'cable').length;
+            
+            document.getElementById('bar-count').textContent = barCount;
+            document.getElementById('cable-count').textContent = cableCount;
+            
+            let totalCost = 0;
+            state.members.forEach(member => {
+                const materialCost = state.materials[member.material].cost;
+                totalCost += materialCost * member.restLength;
+            });
+            
+            document.getElementById('total-cost').textContent = `₹${Math.round(totalCost)}`;
+        }
+
+        function updateStatus(message) {
+            const statusText = document.getElementById('status-text');
+            
+            if (message) {
+                statusText.textContent = message;
+            } else {
+                switch (state.mode) {
+                    case 'addNode':
+                        statusText.textContent = 'Click on ground to add nodes';
+                        break;
+                    case 'connect':
+                        if (state.firstNodeForConnection) {
+                            statusText.textContent = `Selected node ${state.firstNodeForConnection.id}. Click another node to connect.`;
+                        } else {
+                            statusText.textContent = 'Click two nodes to connect them';
+                        }
+                        break;
+                    case 'select':
+                        statusText.textContent = 'Click to select nodes. Shift+Click to pin/unpin. Shift+Drag to move.';
+                        break;
+                    default:
+                        statusText.textContent = 'Ready';
+                }
+            }
+        }
+
+        function onWindowResize() {
+            const width = window.innerWidth - 340;
+            const height = window.innerHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            
+            renderer.setSize(width, height);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
