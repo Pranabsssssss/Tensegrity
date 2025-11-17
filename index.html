@@ -39,6 +39,10 @@
             overflow: hidden;
             height: 100vh;
             display: flex;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
 
         #app-container {
@@ -1164,6 +1168,15 @@
         }
 
         window.addEventListener('load', init);
+        
+        // Disable right-click and copying
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('selectstart', e => e.preventDefault());
+        document.addEventListener('dragstart', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && (e.key === 'c' || e.key === 'a' || e.key === 's' || e.key === 'u' || e.key === 'p')) e.preventDefault();
+            if (e.key === 'F12') e.preventDefault();
+        });
     </script>
 </body>
 </html>
